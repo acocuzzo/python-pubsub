@@ -5,6 +5,13 @@
 [1]: https://pypi.org/project/google-cloud-pubsub/#history
 
 
+### [2.9.1](https://github.com/googleapis/python-pubsub/compare/v2.9.0...v2.9.1) (2022-01-24)
+
+
+### Bug Fixes
+
+* refactor client classes for safer type checking ([#552](https://github.com/googleapis/python-pubsub/issues/552)) ([7f705be](https://github.com/googleapis/python-pubsub/commit/7f705beb927383f14b9d56f0341ee0de101f7c05))
+
 ## [2.9.0](https://www.github.com/googleapis/python-pubsub/compare/v2.8.0...v2.9.0) (2021-11-10)
 
 
