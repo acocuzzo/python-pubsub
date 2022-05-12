@@ -17,6 +17,7 @@ from __future__ import absolute_import
 import copy
 import logging
 import os
+import grpc
 import pkg_resources
 import threading
 import time
@@ -139,6 +140,10 @@ class Client(publisher_client.PublisherClient):
         self.publisher_options = types.PublisherOptions(*publisher_options)
         self._enable_message_ordering = self.publisher_options[0]
 
+        # Enable compression
+        if publisher_options.enable_grpc_compression:
+            kwargs["default_compression_algorithm"] = 2
+        
         # Add the metrics headers, and instantiate the underlying GAPIC
         # client.
         super().__init__(**kwargs)

@@ -133,6 +133,8 @@ class PublisherOptions(NamedTuple):
         "compatible with :class:`~.pubsub_v1.types.TimeoutType`."
     )
 
+    enable_grpc_compression: bool = False
+
 
 # Define the type class and default values for flow control settings.
 #

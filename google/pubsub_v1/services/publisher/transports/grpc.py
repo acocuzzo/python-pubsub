@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+from bz2 import compress
 import warnings
 from typing import Callable, Dict, Optional, Sequence, Tuple, Union
 
@@ -62,6 +63,7 @@ class PublisherGrpcTransport(PublisherTransport):
         quota_project_id: Optional[str] = None,
         client_info: gapic_v1.client_info.ClientInfo = DEFAULT_CLIENT_INFO,
         always_use_jwt_access: Optional[bool] = False,
+        default_compression_algorithm: int = 0
     ) -> None:
         """Instantiate the transport.
 
@@ -171,6 +173,7 @@ class PublisherGrpcTransport(PublisherTransport):
                 ssl_credentials=self._ssl_channel_credentials,
                 quota_project_id=quota_project_id,
                 options=[
+                    ("grpc.default_compression_algorithm", default_compression_algorithm),
                     ("grpc.max_send_message_length", -1),
                     ("grpc.max_receive_message_length", -1),
                     ("grpc.max_metadata_size", 4 * 1024 * 1024),

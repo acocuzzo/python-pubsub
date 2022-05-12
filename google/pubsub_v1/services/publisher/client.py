@@ -389,6 +389,7 @@ class PublisherClient(metaclass=PublisherClientMeta):
         transport: Union[str, PublisherTransport, None] = None,
         client_options: Optional[client_options_lib.ClientOptions] = None,
         client_info: gapic_v1.client_info.ClientInfo = DEFAULT_CLIENT_INFO,
+        default_compression_algorithm: int = 0
     ) -> None:
         """Instantiates the publisher client.
 
@@ -488,6 +489,7 @@ class PublisherClient(metaclass=PublisherClientMeta):
                 quota_project_id=client_options.quota_project_id,
                 client_info=client_info,
                 always_use_jwt_access=True,
+                default_compression_algorithm=default_compression_algorithm
             )
 
     def create_topic(
