@@ -50,12 +50,12 @@ def project():
     yield default_project
 
 
-@pytest.fixture(params=["grpc"])
+@pytest.fixture(params=["grpc", "rest"])
 def publisher(request):
     yield pubsub_v1.PublisherClient(transport=request.param)
 
 
-@pytest.fixture(params=["grpc"])
+@pytest.fixture(params=["grpc", "rest"])
 def subscriber(request):
     yield pubsub_v1.SubscriberClient(transport=request.param)
 
@@ -84,7 +84,6 @@ def cleanup():
 
 def test_publish_messages(publisher, topic_path, cleanup):
     # Make sure the topic gets deleted.
-    publisher = pubsub_v1.PublisherClient(transport="rest")
     cleanup.append((publisher.delete_topic, (), {"topic": topic_path}))
 
     publisher.create_topic(name=topic_path)
@@ -101,8 +100,7 @@ def test_publish_messages(publisher, topic_path, cleanup):
         assert isinstance(result, str)
 
 
-def test_publish_large_messages(topic_path, cleanup):
-    publisher = pubsub_v1.PublisherClient(transport="rest")
+def test_publish_large_messages(publisher, topic_path, cleanup):
     # Make sure the topic gets deleted.
     cleanup.append((publisher.delete_topic, (), {"topic": topic_path}))
 
@@ -131,9 +129,11 @@ def test_publish_large_messages(topic_path, cleanup):
         assert isinstance(result, str)  # the message ID
 
 
+@pytest.mark.parametrize("transport", ["grpc", "rest"])
 def test_subscribe_to_messages(
-    publisher, topic_path, subscriber, subscription_path, cleanup
+    publisher, topic_path, subscription_path, cleanup, transport
 ):
+    subscriber = pubsub_v1.SubscriberClient(transport=transport)
     # Make sure the topic and subscription get deleted.
     cleanup.append((publisher.delete_topic, (), {"topic": topic_path}))
     cleanup.append(
@@ -157,6 +157,10 @@ def test_subscribe_to_messages(
     for future in futures:
         future.result()
 
+    if transport == "rest":
+        with pytest.raises(NotImplementedError) as exc_info:
+            future.result()
+            return
     # Actually open the subscription and hold it open for a few seconds.
     # The callback should process the message numbers to prove
     # that we got everything at least once.
@@ -176,9 +180,11 @@ def test_subscribe_to_messages(
     future.cancel()
 
 
+@pytest.mark.parametrize("transport", ["grpc", "rest"])
 def test_subscribe_to_messages_async_callbacks(
-    publisher, topic_path, subscriber, subscription_path, cleanup
+    publisher, topic_path, subscription_path, cleanup, transport
 ):
+    subscriber = pubsub_v1.SubscriberClient(transport=transport)
     # Make sure the topic and subscription get deleted.
     cleanup.append((publisher.delete_topic, (), {"topic": topic_path}))
     cleanup.append(
@@ -208,6 +214,10 @@ def test_subscribe_to_messages_async_callbacks(
 
     # Actually open the subscription and hold it open for a few seconds.
     future = subscriber.subscribe(subscription_path, callback)
+    if transport == "rest":
+        with pytest.raises(NotImplementedError) as exc_info:
+            future.result()
+            return
     for second in range(5):
         time.sleep(4)
 
@@ -411,8 +421,9 @@ def test_managing_subscription_iam_policy(
     assert bindings[1].members == ["group:cloud-logs@google.com"]
 
 
+@pytest.mark.parametrize("transport", ["grpc", "rest"])
 def test_subscriber_not_leaking_open_sockets(
-    publisher, topic_path, subscription_path, cleanup
+    publisher, topic_path, subscription_path, cleanup, transport
 ):
     # Make sure the topic and the supscription get deleted.
     # NOTE: Since subscriber client will be closed in the test, we should not
@@ -421,8 +432,8 @@ def test_subscriber_not_leaking_open_sockets(
     # Also, since the client will get closed, we need another subscriber client
     # to clean up the subscription. We also need to make sure that auxiliary
     # subscriber releases the sockets, too.
-    subscriber = pubsub_v1.SubscriberClient(transport="grpc")
-    subscriber_2 = pubsub_v1.SubscriberClient(transport="grpc")
+    subscriber = pubsub_v1.SubscriberClient(transport=transport)
+    subscriber_2 = pubsub_v1.SubscriberClient(transport=transport)
     cleanup.append(
         (subscriber_2.delete_subscription, (), {"subscription": subscription_path})
     )
@@ -487,8 +498,9 @@ def test_synchronous_pull_no_deadline_error_if_no_messages(
 
 class TestStreamingPull(object):
     def test_streaming_pull_callback_error_propagation(
-        self, publisher, topic_path, subscriber, subscription_path, cleanup
+        self, publisher, topic_path, subscription_path, cleanup
     ):
+        subscriber = pubsub_v1.SubscriberClient()
         # Make sure the topic and subscription get deleted.
         cleanup.append((publisher.delete_topic, (), {"topic": topic_path}))
         cleanup.append(
@@ -515,8 +527,9 @@ class TestStreamingPull(object):
             future.result(timeout=30)
 
     def test_streaming_pull_ack_deadline(
-        self, publisher, subscriber, project, topic_path, subscription_path, cleanup
+        self, publisher, project, topic_path, subscription_path, cleanup
     ):
+        subscriber = pubsub_v1.SubscriberClient()
         # Make sure the topic and subscription get deleted.
         cleanup.append((publisher.delete_topic, (), {"topic": topic_path}))
         cleanup.append(
@@ -566,8 +579,9 @@ class TestStreamingPull(object):
             subscription_future.cancel()
 
     def test_streaming_pull_max_messages(
-        self, publisher, topic_path, subscriber, subscription_path, cleanup
+        self, publisher, topic_path, subscription_path, cleanup
     ):
+        subscriber = pubsub_v1.SubscriberClient()
         # Make sure the topic and subscription get deleted.
         cleanup.append((publisher.delete_topic, (), {"topic": topic_path}))
         cleanup.append(
@@ -622,8 +636,9 @@ class TestStreamingPull(object):
             subscription_future.cancel()  # trigger clean shutdown
 
     def test_streaming_pull_blocking_shutdown(
-        self, publisher, topic_path, subscriber, subscription_path, cleanup
+        self, publisher, topic_path, subscription_path, cleanup
     ):
+        subscriber = pubsub_v1.SubscriberClient()
         # Make sure the topic and subscription get deleted.
         cleanup.append((publisher.delete_topic, (), {"topic": topic_path}))
         cleanup.append(
@@ -704,9 +719,9 @@ class TestStreamingPull(object):
 )
 class TestBasicRBAC(object):
     def test_streaming_pull_subscriber_permissions_sufficient(
-        self, publisher, topic_path, subscriber, subscription_path, cleanup
+        self, publisher, topic_path, subscription_path, cleanup
     ):
-
+        subscriber = pubsub_v1.SubscriberClient()
         # Make sure the topic and subscription get deleted.
         cleanup.append((publisher.delete_topic, (), {"topic": topic_path}))
         cleanup.append(
@@ -743,7 +758,6 @@ class TestBasicRBAC(object):
     def test_publisher_role_can_publish_messages(
         self, publisher, topic_path, subscriber, subscription_path, cleanup
     ):
-
         # Make sure the topic and subscription get deleted.
         cleanup.append((publisher.delete_topic, (), {"topic": topic_path}))
         cleanup.append(
